@@ -1,0 +1,40 @@
+---
+  name: ci
+
+  on:
+    pull_request:
+    push:
+
+  jobs:
+    delivery:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Check out code
+          uses: actions/checkout@main
+
+    windows:
+      needs: [delivery]
+      runs-on: windows-2019
+      steps:
+        - name: Check out code
+          uses: actions/checkout@main
+        - name: Install Chef Workstation
+          run: . { iwr -useb https://omnitruck.chef.io/install.ps1 } | iex; install -channel stable -project chef-workstation
+          shell: powershell
+        - name: Add Chef Workstation to PATH
+          run: |
+            if ( $env:PATH -like "*chef-workstation*" ) {
+              write-output 'Path already set, no action to perform'
+            } else {
+              write-output 'Adding c:\opscode\chef-workstation\bin to path.'
+              $current_path = [Environment]::GetEnvironmentVariable("PATH", [EnvironmentVariableTarget]::Machine);
+              [Environment]::SetEnvironmentVariable("PATH", $current_path + ";C:\opscode\chef-workstation\bin;", [EnvironmentVariableTarget]::Machine);
+            }
+          shell: powershell
+        - name: test path
+          run: |
+            $env:PATH
+            get-command chef
+            get-command chef-solo
+            get-command inspec
+          shell: powershell
